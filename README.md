@@ -9,6 +9,10 @@ It works for agents that take turns (chat assistants, coding agents) as well
 as for always-on daemons. Once an agent claims a task, it keeps it until it
 finishes or you take it back, however long that takes.
 
+## Demo
+
+![agent-board demo](https://github.com/user-attachments/assets/efe61d21-54ef-4fc5-a06c-93f699983fa1)
+
 ## How it works
 
 - **Agents and keys.** Each agent has a name and one API key. The key is
