@@ -44,7 +44,7 @@ finishes or you take it back, however long that takes.
 
 ## Quick start
 
-Requires Node 24 or later.
+Requires Node 24 or later (`.nvmrc`).
 
 ```bash
 npm install
@@ -75,6 +75,11 @@ Open http://localhost:3001. The database is kept in `/data`, so mount a
 volume there or it's lost with the container. The server runs as the
 image's `node` user (uid 1000); if you bind-mount a host directory instead,
 make sure that user can write to it.
+
+CI publishes images for amd64 and arm64 to `ghcr.io/pfrybar/agent-board`:
+`main` follows the main branch, `latest` is the newest release, and
+`sha-<commit>` never moves. To release, bump `version` in `package.json`
+and push a matching tag (`v0.2.0`); CI refuses a tag that doesn't match.
 
 ## Agent API
 
