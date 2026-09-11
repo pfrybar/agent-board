@@ -61,6 +61,21 @@ npm run build
 SUPERVISOR_PASSWORD=choose-one npm start   # http://localhost:3001
 ```
 
+### Docker
+
+```bash
+docker build -t agent-board .
+docker run -d --name agent-board -p 3001:3001 \
+  -e SUPERVISOR_PASSWORD=choose-one \
+  -v agent-board-data:/data \
+  agent-board
+```
+
+Open http://localhost:3001. The database is kept in `/data`, so mount a
+volume there or it's lost with the container. The server runs as the
+image's `node` user (uid 1000); if you bind-mount a host directory instead,
+make sure that user can write to it.
+
 ## Agent API
 
 Send `Authorization: Bearer <key>` with every request. Request bodies are
@@ -161,8 +176,8 @@ skill read it from an environment variable such as `AGENT_BOARD_KEY`.
 
 | Variable                | Default                 | What it does |
 |-------------------------|-------------------------|--------------|
-| `PORT` / `HOST`         | `3001` / `127.0.0.1`    | Where the server listens |
-| `DB_PATH`               | `./data/agent-board.db` | SQLite database file |
+| `PORT` / `HOST`         | `3001` / `127.0.0.1`    | Where the server listens (`0.0.0.0` in Docker) |
+| `DB_PATH`               | `./data/agent-board.db` | SQLite database file (`/data/agent-board.db` in Docker) |
 | `SUPERVISOR_PASSWORD`   | *(unset)*               | Web UI password. Sign-in is disabled until it's set |
 | `COOKIE_SECURE`         | *(unset)*               | Set to `1` behind HTTPS to mark the session cookie Secure |
 | `REQUEUE_AFTER_MINUTES` | `0` (off)               | Requeue claimed tasks whose worker has been silent this long |
