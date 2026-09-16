@@ -328,12 +328,17 @@ export function postMessage(
       isQuestion ? 1 : 0,
       t,
     );
+    // Who the worker is waiting on: the creator, or the supervisor. An agent
+    // that created the task it is working on answers its own question, so
+    // this can't be "anyone but the worker" or that task would never resume.
+    const isAnswer = actor.type === "supervisor" || agentId === row.created_by;
+
     let status = row.status;
     let type = "message_posted";
     if (isQuestion) {
       status = "needs_input";
       type = "question_asked";
-    } else if (row.status === "needs_input" && !isWorker) {
+    } else if (row.status === "needs_input" && isAnswer) {
       status = "claimed";
       type = "question_answered";
     }

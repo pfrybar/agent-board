@@ -192,6 +192,30 @@ test("a worker's question goes to the creator and the task stays with the worker
   assert.equal(fromSupervisor.json().task.messages.at(-1).authorType, "supervisor");
 });
 
+test("the creator's answer resumes the task, even when it is the worker", async (t) => {
+  const { admin, newAgent } = await setup(t);
+
+  // An agent allowed to send can pick up a task it submitted itself. Nobody
+  // else can answer its question, so its own reply has to.
+  const solo = await newAgent("solo", true);
+  const own = (await solo.call("POST", "/api/tasks", { prompt: "do it" })).json().task.id;
+  assert.equal((await solo.call("POST", "/api/tasks/next")).json().task.id, own);
+  const asked = await solo.call("POST", `/api/tasks/${own}/messages`, { body: "which one?", question: true });
+  assert.equal(asked.json().task.status, "needs_input");
+  const answered = await solo.call("POST", `/api/tasks/${own}/messages`, { body: "that one" });
+  assert.equal(answered.json().task.status, "claimed");
+  assert.equal((await admin("GET", `/admin/tasks/${own}`)).json().events[0].type, "question_answered");
+
+  // But a worker still waiting on someone else can't clear its own question.
+  const boss = await newAgent("boss", true);
+  const hand = await newAgent("hand");
+  const theirs = (await boss.call("POST", "/api/tasks", { prompt: "x" })).json().task.id;
+  assert.equal((await hand.call("POST", "/api/tasks/next")).json().task.id, theirs);
+  await hand.call("POST", `/api/tasks/${theirs}/messages`, { body: "?", question: true });
+  const note = await hand.call("POST", `/api/tasks/${theirs}/messages`, { body: "still working" });
+  assert.equal(note.json().task.status, "needs_input");
+});
+
 test("requeue takes a task from its worker and keeps the conversation", async (t) => {
   const { admin, newAgent, newTask } = await setup(t);
   const a = await newAgent("a");
