@@ -37,6 +37,31 @@ export async function buildApp(config: Config, db: Db = openDb(config.dbPath)): 
     return reply.code(500).send({ error: "internal error", code: "internal" });
   });
 
+  // Security headers on every response. The UI loads nothing but its own
+  // bundle, so the policy needs no exceptions; an inline script or style
+  // added later would break and want a nonce rather than 'unsafe-inline'.
+  const csp = [
+    "default-src 'self'",
+    "base-uri 'none'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+    "object-src 'none'",
+  ].join("; ");
+  app.addHook("onSend", async (req, reply, payload) => {
+    reply.header("content-security-policy", csp);
+    reply.header("x-content-type-options", "nosniff");
+    reply.header("x-frame-options", "DENY");
+    reply.header("referrer-policy", "no-referrer");
+    // Only when the server knows it's reached over HTTPS.
+    if (config.cookieSecure) reply.header("strict-transport-security", "max-age=31536000");
+    // API answers carry keys, tasks and messages: keep them out of caches.
+    const route = req.routeOptions.url;
+    if (route?.startsWith("/api/") || route?.startsWith("/admin/")) {
+      reply.header("cache-control", "no-store");
+    }
+    return payload;
+  });
+
   // Every request passes this gate before any route runs.
   app.addHook("onRequest", accessControl(db));
 

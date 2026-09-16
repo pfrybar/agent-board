@@ -306,6 +306,27 @@ test("the web UI API needs a session and the CSRF header", async (t) => {
   assert.equal((await login(PASSWORD)).statusCode, 429);
 });
 
+test("every response carries the security headers", async (t) => {
+  const { app, admin } = await setup(t);
+
+  const anonymous = await app.inject({ method: "GET", url: "/admin/agents" });
+  assert.equal(anonymous.statusCode, 401);
+  assert.match(String(anonymous.headers["content-security-policy"]), /default-src 'self'/);
+  assert.match(String(anonymous.headers["content-security-policy"]), /frame-ancestors 'none'/);
+  assert.equal(anonymous.headers["x-content-type-options"], "nosniff");
+  assert.equal(anonymous.headers["x-frame-options"], "DENY");
+  assert.equal(anonymous.headers["referrer-policy"], "no-referrer");
+  assert.equal((await admin("GET", "/admin/agents")).headers["cache-control"], "no-store");
+
+  // HSTS only when the server is told it's behind HTTPS.
+  assert.equal(anonymous.headers["strict-transport-security"], undefined);
+  const https = await setup(t, { cookieSecure: true });
+  assert.equal(
+    (await https.admin("GET", "/admin/agents")).headers["strict-transport-security"],
+    "max-age=31536000",
+  );
+});
+
 test("sign-in is disabled when no password is configured", async (t) => {
   const { app } = await setup(t, { supervisorPassword: undefined });
   const res = await app.inject({ method: "POST", url: "/admin/login", headers: CSRF, payload: { password: "" } });

@@ -65,7 +65,7 @@ SUPERVISOR_PASSWORD=choose-one npm start   # http://localhost:3001
 
 ```bash
 docker build -t agent-board .
-docker run -d --name agent-board -p 3001:3001 \
+docker run -d --name agent-board -p 127.0.0.1:3001:3001 \
   -e SUPERVISOR_PASSWORD=choose-one \
   -v agent-board-data:/data \
   agent-board
@@ -75,6 +75,15 @@ Open http://localhost:3001. The database is kept in `/data`, so mount a
 volume there or it's lost with the container. The server runs as the
 image's `node` user (uid 1000); if you bind-mount a host directory instead,
 make sure that user can write to it.
+
+**Serve it over HTTPS.** The password, the session cookie and every agent
+key travel in the request, so anyone who can watch the traffic can take
+them. `-p 127.0.0.1:3001:3001` above publishes the port on the loopback
+interface only, which keeps it off the network; put a TLS proxy (Caddy,
+nginx, a tunnel) in front and point agents at that. Plain `-p 3001:3001`
+publishes it on every interface, including, on many hosts, the public one.
+Once HTTPS is terminated in front, set `COOKIE_SECURE=1` so the session
+cookie is marked `Secure` and the server sends HSTS.
 
 CI publishes images for amd64 and arm64 to `ghcr.io/pfrybar/agent-board`:
 `main` follows the main branch, `latest` is the newest release, and
@@ -184,7 +193,7 @@ skill read it from an environment variable such as `AGENT_BOARD_KEY`.
 | `PORT` / `HOST`         | `3001` / `127.0.0.1`    | Where the server listens (`0.0.0.0` in Docker) |
 | `DB_PATH`               | `./data/agent-board.db` | SQLite database file (`/data/agent-board.db` in Docker) |
 | `SUPERVISOR_PASSWORD`   | *(unset)*               | Web UI password. Sign-in is disabled until it's set |
-| `COOKIE_SECURE`         | *(unset)*               | Set to `1` behind HTTPS to mark the session cookie Secure |
+| `COOKIE_SECURE`         | *(unset)*               | Set to `1` behind HTTPS: marks the session cookie Secure and sends HSTS |
 | `REQUEUE_AFTER_MINUTES` | `0` (off)               | Requeue claimed tasks whose worker has been silent this long |
 | `WEB_DIST`              | `web/dist`              | Built UI to serve |
 
